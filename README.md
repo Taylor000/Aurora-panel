@@ -87,7 +87,13 @@ ip6tables -t nat -A POSTROUTING -s fd00:ea23:9c80:4a54:e242:5f97::/96 -j MASQUER
 bash <(curl -fsSL https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/install.sh)
 ```
 
-安装脚本、Compose 配置均从本仓库下载，面板前后端镜像从 `ghcr.io/taylor000` 拉取。首次使用前，运行本仓库 Actions 中的 **Mirror Aurora images** 工作流，将已锁定版本的正式版及测试版镜像复制到本账号的 GHCR，并确认两个镜像包均已设为 **Public**。在另一台无需登录 GHCR 的机器上运行 `docker manifest inspect ghcr.io/taylor000/aurora-admin-backend:latest` 和 `docker manifest inspect ghcr.io/taylor000/aurora-admin-frontend:latest`，确认能匿名拉取后再安装。镜像复制成功后，后续新安装不再需要原作者的仓库或镜像；重新运行镜像复制工作流仍需要原作者镜像存在。
+安装脚本、Compose 配置均从本仓库下载，面板前后端镜像从 `ghcr.io/taylor000` 拉取。首次使用前，需要**一次性**复制镜像到本账号的 GHCR：
+
+1. 创建具有 `write:packages` 权限的 GitHub 个人访问令牌（classic），在运行本仓库脚本的机器上执行 `docker login ghcr.io -u Taylor000`，提示输入密码时粘贴令牌。仓库的 SSH Deploy Key 只用于 Git 推送，不能用于 GHCR 登录。
+2. 在本仓库目录执行 `bash mirror-images.sh`。脚本使用固定摘要复制正式版和测试版的 AMD64/ARM64 镜像，不会自动跟随原作者更新。
+3. 在 GitHub Packages 中将 `aurora-admin-backend` 和 `aurora-admin-frontend` 两个镜像包设为 **Public**。执行 `docker logout ghcr.io` 后，用 `docker manifest inspect ghcr.io/taylor000/aurora-admin-backend:latest` 和 `docker manifest inspect ghcr.io/taylor000/aurora-admin-frontend:latest` 验证可以匿名访问，再开始新安装。
+
+镜像复制成功后，后续新安装不再需要原作者的仓库或镜像。只有首次复制镜像时需要原作者的 Docker Hub 镜像仍存在。
 
 **由于公开的 github 代理以及 docker 代理不稳定，一键脚本已经移除所有代理选项，如需在国内机器安装，请自行解决相关网络问题**。一键脚本也支持更新测试版本，只需要添加 `--dev` 参数执行脚本即可，但是测试版本并不稳定，可能会出现各种问题，不建议在生产环境中使用。
 
