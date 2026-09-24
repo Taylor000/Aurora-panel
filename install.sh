@@ -35,7 +35,7 @@ AURORA_YML_URL="https://${GITHUB_RAW_URL}/${AURORA_GITHUB}/main/docker-compose.y
 AURORA_IMAGE_LOADER_URL="https://${GITHUB_RAW_URL}/${AURORA_GITHUB}/main/load-images.sh"
 DOCKER_INSTALL_URL="https://get.docker.com"
 DOCKER_COMPOSE_CMD='docker compose'
-DOCKER_COMPOSE_URL="https://${GITHUB_URL}/docker/compose/releases/download/v2.29.7/docker-compose-$(uname -s)-$(uname -m)"
+DOCKER_COMPOSE_URL="https://${GITHUB_URL}/docker/compose/releases/download/v2.29.7/docker-compose-linux-$(uname -m)"
 
 AURORA_DEF_IP=""
 AURORA_DEF_PORT=8000
