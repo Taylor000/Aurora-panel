@@ -13,17 +13,12 @@ Tip="${Green_font_prefix}[注意]${Font_color_suffix}"
 
 [[ $EUID != 0 ]] && echo -e "${Error} 请使用 root 账号运行该脚本！" && exit 1
 
-while [[ $# -ge 1 ]]; do
-    case $1 in
-        --dev)
-            AURORA_VERSION="DEV"
-            shift
-            ;;
-        *)
-            echo -e "${Error} 请检查脚本输入的参数是否正确！"
-            exit 1
-    esac
-done
+if [[ $# -ne 0 ]]; then
+    echo -e "${Error} 仅支持仓库中归档的正式版，不接受其他参数。"
+    exit 1
+fi
+
+AURORA_VERSION="正式版"
 
 INSTALL_VERSION="1.0.0"
 [[ -z "$HOME" ]] && echo -e "${Error} 家目录检查失败！" && exit 1
@@ -37,7 +32,7 @@ GITHUB_RAW_URL="raw.githubusercontent.com"
 GITHUB_URL="github.com"
 AURORA_GITHUB="Taylor000/Aurora-panel"
 AURORA_YML_URL="https://${GITHUB_RAW_URL}/${AURORA_GITHUB}/main/docker-compose.yml"
-AURORA_DEV_YML_URL="https://${GITHUB_RAW_URL}/${AURORA_GITHUB}/main/docker-compose-dev.yml"
+AURORA_IMAGE_LOADER_URL="https://${GITHUB_RAW_URL}/${AURORA_GITHUB}/main/load-images.sh"
 DOCKER_INSTALL_URL="https://get.docker.com"
 DOCKER_COMPOSE_CMD='docker compose'
 DOCKER_COMPOSE_URL="https://${GITHUB_URL}/docker/compose/releases/download/v2.29.7/docker-compose-$(uname -s)-$(uname -m)"
@@ -121,11 +116,22 @@ function install_all() {
 }
 
 function get_config() {
-    echo -e "${Info} 正在下载最新配置文件 ..."
-    [[ $AURORA_VERSION == "DEV" ]] && YML_URL=${AURORA_DEV_YML_URL} || YML_URL=${AURORA_YML_URL}
-    wget -q $YML_URL -O ${AURORA_DOCKER_YML_TEMP}
+    echo -e "${Info} 正在下载本仓库的配置文件 ..."
+    wget -q ${AURORA_YML_URL} -O ${AURORA_DOCKER_YML_TEMP}
     [[ -z $(grep aurora ${AURORA_DOCKER_YML_TEMP}) ]] && echo -e "${Error} 配置文件下载失败，请检查网络连接是否正常！" && exit 1
     mv -f ${AURORA_DOCKER_YML_TEMP} ${AURORA_DOCKER_YML}
+}
+
+function load_images() {
+    echo -e "${Info} 正在从本仓库下载并校验面板镜像 ..."
+    if ! curl -fsSL "${AURORA_IMAGE_LOADER_URL}" -o "${AURORA_HOME}/load-images.sh"; then
+        echo -e "${Error} 镜像加载脚本下载失败！"
+        return 1
+    fi
+    if ! bash "${AURORA_HOME}/load-images.sh"; then
+        echo -e "${Error} 面板镜像加载失败！"
+        return 1
+    fi
 }
 
 function check_install() {
@@ -212,6 +218,7 @@ function install() {
     [[ -d ${AURORA_HOME} ]] || mkdir -p ${AURORA_HOME}
     cd ${AURORA_HOME}
     get_config || exit 1
+    load_images || exit 1
     echo "-----------------------------------"
     read_config
     read_port
@@ -234,20 +241,19 @@ function update() {
     echo_config
     echo "-----------------------------------"
     get_config || exit 1
+    load_images || exit 1
     set_config
     set_port ${AURORA_DEF_PORT} $PORT
     echo -e "${Info} 同步新配置文件完成！"
     [[ -z $(docker ps | grep aurora | grep postgres) ]] && \
         echo -e "${Error} 请先运行极光面板，以保证更新前完成自动备份旧数据库！" && exit 1 || \
         (echo -e "${Tip} 正在备份旧数据库，如果更新后出现问题，请回退旧版本并恢复旧数据库！" && backup)
-    $DOCKER_COMPOSE_CMD pull
+    $DOCKER_COMPOSE_CMD pull redis postgres
     if $ENABLE_IPV6 ; then
         enable_ipv6
     else
         recreate
     fi
-    OLD_IMG_IDS=$(docker images | grep aurora | grep -v latest | awk '{ print $3; }')
-    [[ -z $OLD_IMG_IDS ]] || (docker image rm $OLD_IMG_IDS && echo -e "${Info} 旧版镜像清理完成！")
     $DOCKER_COMPOSE_CMD up -d && \
         (echo -e "${Info} 极光面板更新成功！" && exit 0) || (echo -e "${Error} 极光面板更新失败！" && exit 1)
 }

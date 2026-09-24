@@ -87,15 +87,9 @@ ip6tables -t nat -A POSTROUTING -s fd00:ea23:9c80:4a54:e242:5f97::/96 -j MASQUER
 bash <(curl -fsSL https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/install.sh)
 ```
 
-安装脚本、Compose 配置均从本仓库下载，面板前后端镜像从 `ghcr.io/taylor000` 拉取。首次使用前，需要**一次性**复制镜像到本账号的 GHCR：
+正式版前后端镜像的 AMD64/ARM64 归档保存在本仓库的 `image-archives` 分支。安装脚本会从该分支下载对应架构的分片，校验 SHA-256 后导入本机 Docker，再启动 Compose。整个面板安装过程无需访问原作者仓库或原作者的 Docker Hub 镜像，也无需 GitHub Actions 或 GHCR 登录。本仓库固定当前正式版，不跟随上游更新；Redis、PostgreSQL 和 Docker 安装仍使用各自的第三方来源。
 
-1. 创建具有 `write:packages` 权限的 GitHub 个人访问令牌（classic），在运行本仓库脚本的机器上执行 `docker login ghcr.io -u Taylor000`，提示输入密码时粘贴令牌。仓库的 SSH Deploy Key 只用于 Git 推送，不能用于 GHCR 登录。
-2. 在本仓库目录执行 `bash mirror-images.sh`。脚本使用固定摘要复制正式版和测试版的 AMD64/ARM64 镜像，不会自动跟随原作者更新。
-3. 在 GitHub Packages 中将 `aurora-admin-backend` 和 `aurora-admin-frontend` 两个镜像包设为 **Public**。执行 `docker logout ghcr.io` 后，用 `docker manifest inspect ghcr.io/taylor000/aurora-admin-backend:latest` 和 `docker manifest inspect ghcr.io/taylor000/aurora-admin-frontend:latest` 验证可以匿名访问，再开始新安装。
-
-镜像复制成功后，后续新安装不再需要原作者的仓库或镜像。只有首次复制镜像时需要原作者的 Docker Hub 镜像仍存在。
-
-**由于公开的 github 代理以及 docker 代理不稳定，一键脚本已经移除所有代理选项，如需在国内机器安装，请自行解决相关网络问题**。一键脚本也支持更新测试版本，只需要添加 `--dev` 参数执行脚本即可，但是测试版本并不稳定，可能会出现各种问题，不建议在生产环境中使用。
+**如需在国内机器安装，请自行确保可以访问 GitHub Raw、Docker 安装源和 Redis/PostgreSQL 镜像源。** 本仓库没有公开代理选项，且不提供测试版 `--dev`。
 
 ## 手动安装 — 中转被控机
 
@@ -162,9 +156,13 @@ ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
 ### 4. 安装并启动面板（必须）
 
 ```shell
-mkdir -p ~/aurora && cd ~/aurora && wget https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/docker-compose.yml -O docker-compose.yml && docker-compose up -d
+mkdir -p ~/aurora && cd ~/aurora
+wget https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/docker-compose.yml -O docker-compose.yml
+wget https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/load-images.sh -O load-images.sh
+bash load-images.sh
+docker compose up -d
 # 创建管理员用户（密码必须设置8位以上，否则无法登陆）
-docker-compose exec backend python app/initial_data.py
+docker compose exec backend python app/initial_data.py
 ```
 之后可以访问 `http://你的IP:8000` 进入面板。
 
@@ -178,19 +176,7 @@ docker-compose exec backend python app/initial_data.py
 
 ## 更新
 
-### 正式版
-```shell
-cd ~/aurora
-wget https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/docker-compose.yml -O docker-compose.yml
-docker-compose pull && docker-compose down --remove-orphans && docker-compose up -d
-```
-
-### ~~内测版（目前已不维护，请不要使用）~~
-```shell
-cd ~/aurora
-wget https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/docker-compose-dev.yml -O docker-compose.yml
-docker-compose pull && docker-compose down --remove-orphans && docker-compose up -d
-```
+本仓库固定当前正式版，不自动跟随上游更新。一键脚本中的“更新”会重新下载本仓库的配置与镜像归档，保留原配置并备份数据库；手动安装可再次运行 `bash load-images.sh` 后执行 `docker compose up -d`。
 
 ## 数据库备份与恢复
 
