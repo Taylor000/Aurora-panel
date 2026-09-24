@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   worker:
-    image: leishi1313/aurora-admin-backend:dev-latest
+    image: ghcr.io/taylor000/aurora-admin-backend:dev-latest
     restart: always
     command: bash worker.sh
     environment:
@@ -14,7 +14,7 @@ services:
       - app-data:/app/ansible/priv_data_dirs
 
   backend:
-    image: leishi1313/aurora-admin-backend:dev-latest
+    image: ghcr.io/taylor000/aurora-admin-backend:dev-latest
     restart: always
     command: bash -c "while !</dev/tcp/postgres/5432; do sleep 1; done; alembic upgrade heads && python app/main.py"
     environment:
@@ -28,7 +28,7 @@ services:
       - postgres
 
   nginx:
-    image: leishi1313/aurora-admin-frontend:dev-latest
+    image: ghcr.io/taylor000/aurora-admin-frontend:dev-latest
     restart: always
     ports:
       - 8000:80
