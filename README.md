@@ -1,42 +1,13 @@
 # 极光面板
 
-## 这是什么？
-
-这是一个多服务器端口租用管理面板，你可以添加多台服务器及端口，并将其分配给任意注册用户，租户则可以很方便地使用被分配的端口来完成各种操作，目前支持的端口功能（**以下功能均支持 AMD64 或 ARM64 架构运行**）：
-
-- [iptables](https://www.netfilter.org/)
-- [socat](http://www.dest-unreach.org/socat/)
-- [gost](https://github.com/ginuerzh/gost)
-- [ehco](https://github.com/Ehco1996/ehco)
-- [realm](https://github.com/zephyrchien/realm)
-- [v2ray](https://github.com/v2fly/v2ray-core)
-- [brook](https://github.com/txthinking/brook)
-- [iperf](https://iperf.fr)
-- [haproxy](http://www.haproxy.org)
-- [wstunnel](https://github.com/erebe/wstunnel)
-- [shadowsocks](https://github.com/shadowsocks)
-- [tinyPortMapper](https://github.com/wangyu-/tinyPortMapper)
-- [Prometheus Node Exporter](https://github.com/leishi1313/node_exporter)
-
 目前，全部端口转发功能均已支持 `IPV6` 。除 `iptables` 以外的转发方式，如果中转机器本身同时具备 `IPV4` 和 `IPV6` 网络访问能力，可以借助端口转发实现 `IPV4 to IPV6` 或 `IPV6 to IPV4`。
 
-### 面板服务器与被控机说明
-
-**面板建议安装在单独的一台服务器上，建议安装配置为不低于单核 512M 内存的 VPS 中**，可以直接部署到本地。**被控机端无需做任何特别配置，只需保证面板服务器能够通过 ssh 连接至被控机即可。**
-
-面板服务器在连接被控机的时候会检测被控机是否已经安装好 python （python 为被控机必须依赖），如果被控机上没安装会自动在被控机上通过 apt / yum 执行 python 安装（优先安装python3），如果被控机没有自带 python 且自动安装失败会导致面板显示被控机连接失败（表现为被控机连接状态持续转圈）。
-
-#### 面板（主控机）支持进度：
+#### 面板（主控机）支持：
 
 - 操作系统
 - [x] CentOS 7+
 - [x] Debian 8+
 - [x] Ubuntu 18+
-- [x] Alpine Linux 3.15.0+ （请使用一键脚本安装）
-- 虚拟平台
-- [x] KVM
-- [x] VMware
-- [x] OVZ （需要 OVZ 支持 docker）
 - CPU 架构
 - [x] AMD64
 - [x] ARM64
@@ -54,65 +25,29 @@ cd ~/aurora/ && docker-compose up -d
 ip6tables -t nat -A POSTROUTING -s fd00:ea23:9c80:4a54:e242:5f97::/96 -j MASQUERADE
 ```
 
-#### 中转机器（被控机）支持进度：
+#### 中转机器（被控机）支持：
 
 - 操作系统
 - [x] CentOS 7+
 - [x] Debian 8+
 - [x] Ubuntu 18+
-- [ ] Alpine Linux 3.15.0+  （正在开发中，仅支持 iptables 转发和流量统计）
-- [x] 其他操作系统如果支持 docker，可以参考下面的手动安装方法
-- 虚拟平台
-- [x] KVM
-- [x] VMware
-- [x] OVZ
 - CPU 架构
 - [x] AMD64
 - [x] ARM64
 - 网络类型
 - [x] IPV4
 - [X] IPV6
-- Linux init process
-- [x] systemd
-- [ ] SysVinit
-- [ ] OpenRC
 
-## 怎么跑起来？
+## 一键脚本
 
-## 一键脚本（推荐）
-
-目前已支持一键安装、更新（自动同步旧配置）、卸载面板以及备份数据库、添加超级管理员帐号、更换面板端口等操作。**使用一键脚本安装后，如果仍需使用一脚脚本更新，请勿更改数据库用户名和密码，否则会使得更新后无法同步更改后的数据库用户名和密码，导致数据库连接出错。**
+**使用一键脚本安装后，如果仍需使用一脚脚本更新，请勿更改数据库用户名和密码，否则会使得更新后无法同步更改后的数据库用户名和密码，导致数据库连接出错。**
 
 ```shell
 bash <(curl -fsSL https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/install.sh)
 ```
 
-正式版前后端镜像的 AMD64/ARM64 归档保存在本仓库的 `image-archives` 分支。安装脚本会从该分支下载对应架构的分片，校验 SHA-256 后导入本机 Docker，再启动 Compose。整个面板安装过程无需访问原作者仓库或原作者的 Docker Hub 镜像，也无需 GitHub Actions 或 GHCR 登录。本仓库固定当前正式版，不跟随上游更新；Redis、PostgreSQL 和 Docker 安装仍使用各自的第三方来源。
+正式版前后端镜像的 AMD64/ARM64 归档保存在本仓库的 `image-archives` 分支。安装脚本会从该分支下载对应架构的分片，校验 SHA-256 后导入本机 Docker，再启动 Compose。
 
-**如需在国内机器安装，请自行确保可以访问 GitHub Raw、Docker 安装源和 Redis/PostgreSQL 镜像源。** 本仓库没有公开代理选项，且不提供测试版 `--dev`。
-
-## 手动安装 — 中转被控机
-
-**对于不在中转机器（被控机）支持进度里面的系统版本，无法直接使用面板连接中转机器。** 如果被控机支持运行 docker，则可以利用被控机运行一个网络模式为 host 的特权 centos7 容器，并利用面板连接到 centos7 docker 中，实现转发功能的操作。（或可以参考 [aurora-client](https://github.com/smartcatboy/aurora-client) 直接编译被控端镜像运行）
-
-```shell
-# 启动 centos 7 特权容器，设置网络模式为 host ，并设置为开机自启动
-sudo docker run -d --privileged --name aurora-client --network=host --restart=always -v /lib/modules:/lib/modules centos:7 /usr/sbin/init
-# 进入 centos 7 容器内
-sudo docker exec -it aurora-client bash
-# 在 docker 内安装 openssh 服务端，并修改容器的 ssh 端口（避免跟主机 ssh 服务冲突）
-yum makecache -y && yum install -y openssh-server
-sed -i "s/#Port 22/Port 62222/" /etc/ssh/sshd_config
-# 启用 ssh 服务
-systemctl enable --now sshd
-# 安装 iptables 转发必须的依赖
-yum install -y iproute
-# 为 root 账号设置密码
-passwd
-# 直接在面板添加中转机器 ip:62222 ，用户名 root ，密码为刚刚设置的密码
-# 卸载时候只需要在面板删除对应中转机，并删除 aurora-client 容器即可
-sudo docker stop aurora-client && sudo docker rm aurora-client
-```
 
 ## 手动安装 — 面板主控机
 
@@ -174,9 +109,6 @@ docker compose exec backend python app/initial_data.py
 
 3. 默认挂载 `~/.ssh/id_rsa` 作为连接服务器的密钥，如使用其他密钥或者不使用密钥可以删除配置文件中的 `- $HOME/.ssh/id_rsa:/app/ansible/env/ssh_key` 。
 
-## 更新
-
-本仓库固定当前正式版，不自动跟随上游更新。一键脚本中的“更新”会重新下载本仓库的配置与镜像归档，保留原配置并备份数据库；手动安装可再次运行 `bash load-images.sh` 后执行 `docker compose up -d`。
 
 ## 数据库备份与恢复
 
@@ -204,32 +136,3 @@ docker volume rm aurora_db-data
 docker volume rm aurora_app-data
 ```
 
-## 面板长什么样？
-
-### 服务器管理页面
-
-![](https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/img/servers.png)
-
-#### 修改/添加服务器
-
-![](https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/img/servers_edit.png)
-
-### 服务器端口管理页面
-
-![](https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/img/server.png)
-
-#### 添加/编辑端口
-
-![](https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/img/server_port_edit.png)
-
-#### 端口分配页面
-
-![](https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/img/server_port_users.png)
-
-#### 端口设置 iptables
-
-![](https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/img/server_port_edit_rule_iptables.png)
-
-#### 端口设置 gost
-
-![](https://raw.githubusercontent.com/Taylor000/Aurora-panel/main/img/server_port_edit_rule_gost.png)
